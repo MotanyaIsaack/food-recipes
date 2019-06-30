@@ -3,4 +3,5 @@
     <item name="progress_bar" type="id" />
     <item name="recipe_list" type="id" />
     <item name="search_view" type="id" />
+    <item name="action_categories" type="id" />
 </resources>
