@@ -4,4 +4,7 @@
     <string name="todo">TODO</string>
     <string name="queryHint">chicken...</string>
     <string name="menu_action_categories">Categories</string>
+    <string name="default_recipe_title">Some Recipe title</string>
+    <string name="default_ingredients">Ingredients</string>
+    <string name="default_ratings">100</string>
 </resources>

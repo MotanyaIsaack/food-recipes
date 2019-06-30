@@ -1,9 +1,11 @@
 package com.example.foodreciepes;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.Observer;
@@ -59,6 +61,17 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(mAdapter);
 
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                //Determining if its at the bottom
+                if (!mRecyclerView.canScrollVertically(1)){
+                    //Search the next page
+                    mRecipeListViewModel.searchNextPage();
+                }
+            }
+        });
+
     }
 
     private void subscribeObservers(){
@@ -105,7 +118,9 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
 
     @Override
     public void onRecipeClick(int position) {
-
+        Intent intent = new Intent(this,RecipeActivity.class);
+        intent.putExtra("recipe",mAdapter.getSelectedRecipe(position));
+        startActivity(intent);
     }
 
     @Override

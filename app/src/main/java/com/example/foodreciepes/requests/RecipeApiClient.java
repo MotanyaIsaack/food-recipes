@@ -7,8 +7,10 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.foodreciepes.AppExecutors;
 import com.example.foodreciepes.models.Recipe;
+import com.example.foodreciepes.requests.responses.RecipeResponse;
 import com.example.foodreciepes.requests.responses.RecipeSearchResponse;
 import com.example.foodreciepes.util.Constants;
+import com.google.android.material.appbar.AppBarLayout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +32,8 @@ public class RecipeApiClient {
     private MutableLiveData<List<Recipe>> mRecipes;
     //Global object for the runnable
     private RetrieveRecipesRunnable mRetrieveRecipesRunnable;
+    private RetrieveRecipeRunnable mRetrieveRecipeRunnable;
+    private MutableLiveData<Recipe> mRecipe;
 
     public static RecipeApiClient getInstance(){
         if (instance == null) {
@@ -40,10 +44,15 @@ public class RecipeApiClient {
 
     private RecipeApiClient() {
         mRecipes = new MutableLiveData<>();
+        mRecipe = new MutableLiveData<>();
     }
 
     public LiveData<List<Recipe>> getRecipes(){
         return mRecipes;
+    }
+
+    public LiveData<Recipe> getRecipe(){
+        return mRecipe;
     }
 
     public void searchRecipesApi(String query,int pageNumber){
@@ -62,6 +71,22 @@ public class RecipeApiClient {
                 handler.cancel(true);
             }
         },NETWORK_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+
+    public void searchRecipeById(String recipeId){
+        if (mRetrieveRecipeRunnable!=null){
+            mRetrieveRecipeRunnable = null;
+        }
+        mRetrieveRecipeRunnable = new RetrieveRecipeRunnable(recipeId);
+
+        final Future handler = AppExecutors.get().networkIO().submit(mRetrieveRecipeRunnable);
+        AppExecutors.get().networkIO().schedule(new Runnable() {
+            @Override
+            public void run() {
+                //Let the user know its timed out
+                handler.cancel(true);
+            }
+        },NETWORK_TIMEOUT,TimeUnit.MILLISECONDS);
     }
 
     //Build the runnable class we are going to use to retrieve data from the runnable API
@@ -123,9 +148,62 @@ public class RecipeApiClient {
             cancelRequest = true;
         }
     }
+
+
+    private class RetrieveRecipeRunnable implements Runnable{
+
+        private String recipeId;
+        private boolean cancelRequest;
+
+        public RetrieveRecipeRunnable(String recipeId) {
+            this.recipeId = recipeId;
+            cancelRequest = false;
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                Response response = getRecipe(recipeId).execute();
+                if (cancelRequest){
+                    return;
+                }
+                if (response.code()==200){
+                    Recipe recipe = ((RecipeResponse)response.body()).getRecipe();
+                    mRecipe.postValue(recipe);
+                }else{
+                    String error = response.errorBody().string();
+                    Log.e(TAG, "run: " + error);
+                    //In case of an error i post null
+                    mRecipe.postValue(null);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                //In case of an error i post null
+                mRecipe.postValue(null);
+            }
+
+
+        }
+        //Method that will return the call object
+        private Call<RecipeResponse> getRecipe (String recipeId){
+            return ServiceGenerator.getReciepeApi().getRecipe(
+                    Constants.API_KEY,
+                    recipeId
+            );
+        }
+
+        private void cancelRequest(){
+            Log.d(TAG, "cancelRequest: cancelling the search request ");
+            cancelRequest = true;
+        }
+    }
     public void cancelRequest(){
         if (mRetrieveRecipesRunnable!=null){
             mRetrieveRecipesRunnable.cancelRequest();
+        }
+        if (mRetrieveRecipeRunnable!=null){
+            mRetrieveRecipeRunnable.cancelRequest();
         }
     }
 }
